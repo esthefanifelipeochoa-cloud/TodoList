@@ -2,56 +2,86 @@ const express = require('express');
 const app = express();
 const port=3000;
 app.use(express.json());
-
-let tareas = [
-  {
-    id: 1,
-    titulo: 'Estudiar Express',
-    completada: false
-  },
-  {
-    id: 2,
-    titulo: 'Hacer ejercicio',
-    completada: true
-  }
-];
+app.set('etag', true);
+const db = require('./db'); 
+app.use(express.urlencoded({ extended: true }));
 
 app.get('/tareas', (req, res) => {
-  res.json(tareas);
-});
+    db.query('SELECT * FROM tareas', (er, resultados) => {
+        if (er) {
+            return res.status(500).json({ error: er});
+        }
 
-app.get('/tareas/:id', (req, res) => {
-
-  const tarea = tareas.find(
-    t => t.id == req.params.id
-  );
-
-  res.json(tarea);
-
+        res.json(resultados);
+    });
 });
 
 app.post('/tareas', (req, res) => {
-  const tNueva={
-    id: tareas.length+1,
-    titulo: req.body.titulo,
-    completada: false
-  }
-  tareas.push(tNueva); 
-  res.status(201).json(tNueva);
+    const { titulo, descripcion, fecha_limite } = req.body;
+
+    const sql = `
+        INSERT INTO tareas (titulo, descripcion, fecha_limite)
+        VALUES (?, ?, ?)
+    `;
+
+    db.query(sql, [titulo, descripcion, fecha_limite], (er, result) => {
+        if (er) {
+            return res.status(500).json({ error: er });
+        }
+
+        res.status(201).json({
+            mensaje: "tarea creada",
+            id: result.insertId
+        });
+    });
 });
 
 app.delete('/tareas/:id', (req, res) => {
-  const id=parseInt(req.params.id);
-  const tamOriginal=tareas.length;
-  tareas=tareas.filter(t=>t.id !== id);
-  if(tareas.length==tamOriginal){
-    return res.status(404).json({mensaje: 'tarea no se ecuentra añadida'});
-  }
-  res.json({mensaje: 'tarea eliminado correctamente'});
-
+  const id=req.params.id;
+  db.query('DELETE FROM tareas WHERE id=?',[id],(er,resultado)=>{
+    if (er==true){
+        return res.status(500).json({ error: er});
+    }
+    res.json({mensaje:'tarea eliminada correctamente'});
+  });
 });
 
+app.put('/tareas/:id',(req,res)=>{
+    const id=req.params.id;
+    const { titulo, descripcion, fecha_limite } = req.body;
+    db.query('UPDATE tareas SET titulo=?,descripcion=?, fecha_limite=? WHERE id=?',[tutulo,descripcion,fecha_limite,id],(er,resultado)=>{
+       if (er==true){
+        return res.status(500).json({ error: er});
+       }
+       res.json({mensaje:'tarea actualizada correctamente'});
+ 
+    });
 
+});
+app.patch('/tareas/:id',(req,res)=>{
+    const id=req.params.id;
+    const { titulo} = req.body;
+    db.query('UPDATE tareas SET titulo=? WHERE id=?',[titulo,id],(er,resultado)=>{
+       if (er==true){
+        return res.status(500).json({ error: er});
+       }
+       res.json({mensaje:'titulo actualizado correctamente'});
+ 
+    });
+
+});
+app.head('/metadata',(req,res)=>{
+    res.setHeader('Content-Type','application/json');
+    res.setHeader('Version','1.0');
+    res.setHeader('Proyecto','TodoList');
+    res.status(200).end();
+
+});
+app.options('/metadata',(req,res)=>{
+    res.setHeader('Allow','GET,POST, DELETE, PUT, PATCH, HEAD, OPTIONS');
+    res.status(200).end();
+
+});
 app.listen(port, () => {
   console.log('Servidor ejecutándose');
 });
