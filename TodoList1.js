@@ -1,11 +1,12 @@
 const express = require('express');
 const app = express();
 const port=3000;
+const db = require('./db'); 
+const cors = require("cors");
 app.use(express.json());
 app.set('etag', true);
-const db = require('./db'); 
 app.use(express.urlencoded({ extended: true }));
-
+app.use(cors());
 app.get('/tareas', (req, res) => {
     db.query('SELECT * FROM tareas', (er, resultados) => {
         if (er) {
@@ -39,7 +40,7 @@ app.post('/tareas', (req, res) => {
 app.delete('/tareas/:id', (req, res) => {
   const id=req.params.id;
   db.query('DELETE FROM tareas WHERE id=?',[id],(er,resultado)=>{
-    if (er==true){
+    if (er){
         return res.status(500).json({ error: er});
     }
     res.json({mensaje:'tarea eliminada correctamente'});
@@ -49,8 +50,8 @@ app.delete('/tareas/:id', (req, res) => {
 app.put('/tareas/:id',(req,res)=>{
     const id=req.params.id;
     const { titulo, descripcion, fecha_limite } = req.body;
-    db.query('UPDATE tareas SET titulo=?,descripcion=?, fecha_limite=? WHERE id=?',[tutulo,descripcion,fecha_limite,id],(er,resultado)=>{
-       if (er==true){
+    db.query('UPDATE tareas SET titulo=?,descripcion=?, fecha_limite=? WHERE id=?',[titulo,descripcion,fecha_limite,id],(er,resultado)=>{
+       if (er){
         return res.status(500).json({ error: er});
        }
        res.json({mensaje:'tarea actualizada correctamente'});
@@ -60,12 +61,12 @@ app.put('/tareas/:id',(req,res)=>{
 });
 app.patch('/tareas/:id',(req,res)=>{
     const id=req.params.id;
-    const { titulo} = req.body;
+    const { estado} = req.body;
     db.query('UPDATE tareas SET titulo=? WHERE id=?',[titulo,id],(er,resultado)=>{
-       if (er==true){
+       if (er){
         return res.status(500).json({ error: er});
        }
-       res.json({mensaje:'titulo actualizado correctamente'});
+       res.json(resultado);
  
     });
 
